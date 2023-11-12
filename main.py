@@ -1,26 +1,11 @@
 import requests
-from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 
-class ShipData:
-    def __init__(self, mmsi, type_g, build_year, length, breath, tonnage):
-        self.mmsi = str(mmsi)
-        self.generic_type = type_g
-        self.build_year = build_year
-        self.length = length
-        self.breath = breath
-        self.tonnage = tonnage
+from mmsi_data import ShipData
+from mongo_repo import AISMongo
 
-    def to_dict(self):
-        return {
-            'mmsi': self.mmsi,
-            'generic_type': self.generic_type,
-            'build_year': self.build_year,
-            'length': self.length,
-            'breath': self.breath,
-            'gross_tonnage': self.tonnage
-        }
-def mmsi_data(mmsi):
+
+def scrap_mmsi_data(mmsi):
     def get_vessel_type(s):
         generic = s.find('h2', class_='vst').text
         meta = generic.split(',')
@@ -66,8 +51,23 @@ def mmsi_data(mmsi):
     return ShipData(id, g, year, l, b, t)
 
 
+class MMSIWizard:
+    def __init__(self):
+        self.mmsi_db = AISMongo()
+
+    def get_mmsi(self, mmsi):
+        if self.mmsi_db.exist_mmsi(mmsi):
+            print('DB-ed')
+            return self.mmsi_db.get_mmsi(mmsi)
+        mmsi_data = scrap_mmsi_data(mmsi)
+        self.mmsi_db.insert_mssi(mmsi_data)
+        print('Scrap-ed')
+        return mmsi_data
 
 if __name__ == '__main__':
-    info = mmsi_data('440114690')
+    little_wizzard = MMSIWizard()
+    info = little_wizzard.get_mmsi('440055170')
     print(info.to_dict())
+
+    del little_wizzard
 
